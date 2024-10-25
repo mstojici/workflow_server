@@ -1,0 +1,10 @@
+com\neota\workflowserver\model\EndNode.class
+com\neota\workflowserver\model\Node.class
+com\neota\workflowserver\model\Lane.class
+com\neota\workflowserver\WorkflowServer.class
+com\neota\workflowserver\model\StartNode.class
+com\neota\workflowserver\model\Root.class
+com\neota\workflowserver\model\Source.class
+com\neota\workflowserver\model\Link.class
+com\neota\workflowserver\model\TaskNode.class
+com\neota\workflowserver\model\NOP.class
