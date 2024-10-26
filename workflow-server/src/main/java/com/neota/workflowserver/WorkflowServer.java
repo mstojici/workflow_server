@@ -1,15 +1,16 @@
 package com.neota.workflowserver;
 
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Arrays;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.neota.workflowserver.model.*;
+import com.neota.workflowserver.model.Workflow;
 
 public class WorkflowServer {
+	private static final Map<String, Workflow> workflows = new HashMap<>();
 
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
@@ -30,7 +31,7 @@ public class WorkflowServer {
 			return true;
 		}
 
-		switch (getCommandTypeFromCommand(command)) {
+		switch (WorkflowUtils.getCommandTypeFromCommand(command)) {
 		case STOP:
 			System.out.println("WorkflowServer started.");
 			return false;
@@ -44,23 +45,30 @@ public class WorkflowServer {
 	}
 
 	private static void createWorkflow(String command) {
-		int firstSpaceIndex = command.indexOf(' ');
-		String jsonFileName = command.substring(firstSpaceIndex + 1);
-		ObjectMapper objectMapper = new ObjectMapper();
+		Workflow workflow;
+
+		String[] splitString = command.split("\\s+", 3);
+		if (splitString.length < 3) {
+			System.out.println("Syntax of create workflow command is:\n"
+					+ "create_workflow <workflow_name> <path_to_JSON_workflow>");
+			return;
+		}
+		String workflowName = splitString[1];
+		String jsonFileName = splitString[2];
 
 		try {
-			Root root = objectMapper.readValue(new File(jsonFileName), Root.class);
-			System.out.println(root);
-
+			ObjectMapper objectMapper = new ObjectMapper();
+			workflow = objectMapper.readValue(new File(jsonFileName), Workflow.class);
 		} catch (IOException e) {
 			System.out.println("Invalid JSON workflow definition:");
 			System.out.println(e.getMessage());
+			return;
 		}
-	}
 
-	private static CommandType getCommandTypeFromCommand(String command) {
-		String commandTypeString = command.split("\\s+")[0].toUpperCase();
-		return Arrays.stream(CommandType.values()).filter(a -> a.name().equals(commandTypeString)).findFirst()
-				.orElse(CommandType.INVALID);
+		if (WorkflowValidator.validate(workflow)) {
+			workflows.put(workflowName, workflow);
+			System.out.println(workflow);
+		}
+
 	}
 }

@@ -1,6 +1,6 @@
 package com.neota.workflowserver.model;
 
-public class Root {
+public class Workflow {
     private Source source;
 
     public Source getSource() {
