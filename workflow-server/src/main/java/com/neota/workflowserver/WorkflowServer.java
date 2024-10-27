@@ -9,13 +9,13 @@ import com.neota.workflowserver.model.Workflow;
 public class WorkflowServer {
     private static final Map<String, Workflow> workflows = new HashMap<>();
     private static final Map<String, Session> sessions = new HashMap<>();
+    public static int nodeExecutionTimeSeconds = 60;
 
     public static void main(String[] args) {
         System.out.println("WorkflowServer is running.");
         try (Scanner scanner = new Scanner(System.in)) {
             String command;
             do {
-                System.out.print("> ");
                 command = scanner.nextLine();
             } while (processCommand(command));
         }
@@ -42,6 +42,9 @@ public class WorkflowServer {
             case SESSION_STATE:
                 handleSessionState(command);
                 break;
+            case SET_EXEC_TIME:
+            	handleSetExecTime(command);
+            	break;
             case INVALID:
                 System.out.println("Invalid command.");
                 break;
@@ -81,7 +84,7 @@ public class WorkflowServer {
         	return;
         }
         
-        Session session = new Session(workflow);
+        Session session = new Session(workflow, sessionName);
         sessions.put(sessionName, session);
         runSessionInNewThread(session);
         System.out.println("Session " + sessionName + " started.");
@@ -120,6 +123,19 @@ public class WorkflowServer {
         }
         
         System.out.println(session.getStateMessage());
+    }
+
+    private static void handleSetExecTime(String command) {
+        String[] args = WorkflowUtils.parseCommandArgs(command, 2, "set_exec_time <time_in_seconds>");
+        String timeString = args[1];
+        
+        try {
+            nodeExecutionTimeSeconds = Integer.parseInt(timeString);
+        } catch (NumberFormatException e) {
+            System.out.println("Not an integer value: " + timeString);
+            return;
+        }        
+        System.out.println("Execution time set.");
     }
 
 

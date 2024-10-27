@@ -12,9 +12,11 @@ public class Session {
     private Node currentNode;
     private Lane currentLane;
     private SessionState state;
+    private String name;
 
-    public Session(Workflow workflow) {
+    public Session(Workflow workflow, String name) {
         this.workflow = workflow;
+        this.name = name;
         this.currentNode = WorkflowUtils.getStartNode(workflow);
         this.currentLane = WorkflowUtils.getLaneOfNode(workflow, currentNode);
         this.state = SessionState.INITIALIZED;
@@ -43,7 +45,7 @@ public class Session {
 
         if (nextNode instanceof EndNode) {
             state = SessionState.FINISHED;
-            System.out.println("Session completed.");
+            System.out.println("Session " + name + " completed.");
             return false;
         }
 
@@ -57,10 +59,10 @@ public class Session {
         return true;
     }
 
-    // Delay execution to simulate processing time
+    // sleep to simulate node execution time
     private void simulateSomeWork() {
         try {
-            Thread.sleep(5_000);
+            Thread.sleep(WorkflowServer.nodeExecutionTimeSeconds * 1_000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             e.printStackTrace();
@@ -68,6 +70,7 @@ public class Session {
     }
 
     private void printCurrentNodeDoneMessage() {
+    	System.out.print("Session " + name + ": ");
         if (currentNode instanceof TaskNode) {
             System.out.println(((TaskNode) currentNode).getName() + " done.");
         } else if (currentNode instanceof NOP) {

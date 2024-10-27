@@ -58,6 +58,12 @@ public class WorkflowUtils {
                 .findFirst();
     }
 
+    public static <T> long countNodesOfType(Workflow workflow, Class<T> type) {
+        return workflow.getSource().getNodes().values().stream()
+                .filter(type::isInstance)
+                .count();
+    }
+
     public static StartNode getStartNode(Workflow workflow) {
         return getNodeOfType(workflow, StartNode.class)
                 .orElseThrow(() -> new IllegalStateException("StartNode not found in workflow."));
