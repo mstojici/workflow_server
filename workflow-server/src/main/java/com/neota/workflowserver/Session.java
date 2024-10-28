@@ -1,24 +1,30 @@
 package com.neota.workflowserver;
 
-import com.neota.workflowserver.model.EndNode;
-import com.neota.workflowserver.model.Lane;
-import com.neota.workflowserver.model.NOP;
-import com.neota.workflowserver.model.Node;
-import com.neota.workflowserver.model.TaskNode;
-import com.neota.workflowserver.model.Workflow;
+import com.neota.workflowserver.enums.SessionState;
+import com.neota.workflowserver.json.model.*;
+import com.neota.workflowserver.nodeaction.*;
 
 public class Session {
     private final Workflow workflow;
     private Node currentNode;
+    private Node nextNode;
     private Lane currentLane;
+    private Lane nextLane;
     private SessionState state;
-    private String name;
+    private final String name;
+    private NodeAction action;
 
     public Session(Workflow workflow, String name) {
         this.workflow = workflow;
         this.name = name;
+        initializeSession();
+    }
+
+    private void initializeSession() {
         this.currentNode = WorkflowUtils.getStartNode(workflow);
+        this.nextNode = WorkflowUtils.getNextNode(workflow, currentNode);
         this.currentLane = WorkflowUtils.getLaneOfNode(workflow, currentNode);
+        this.nextLane = WorkflowUtils.getLaneOfNode(workflow, nextNode);
         this.state = SessionState.INITIALIZED;
     }
 
@@ -26,74 +32,75 @@ public class Session {
         return state;
     }
 
-    // Used to start as well as to continue the session
+    public void setState(SessionState state) {
+        this.state = state;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    /* Starts or resumes the workflow session. */
     public void go() {
         state = SessionState.RUNNING;
         while (state == SessionState.RUNNING) {
-            if (!processNextNode()) {
-                break;
-            }
-            simulateSomeWork();
-            printCurrentNodeDoneMessage();
+            if (!processNextNode()) break;
         }
     }
 
-    // Process the next node in the workflow, updating the session state
+    /* Processes the next node in the workflow and updates session state. */
     private boolean processNextNode() {
-        Node nextNode = WorkflowUtils.getNextNode(workflow, currentNode);
-        Lane nextLane = WorkflowUtils.getLaneOfNode(workflow, nextNode);
-
-        if (nextNode instanceof EndNode) {
-            state = SessionState.FINISHED;
-            System.out.println("Session " + name + " completed.");
-            return false;
-        }
-
-        if (!currentLane.equals(nextLane)) {
-            state = SessionState.STOPPED;
-            currentLane = nextLane;
-            return false;
-        }
+        if (nextNode instanceof EndNode) return completeSession();
+        if (shouldStopForNewLane()) return stopSession();
+        if (nextNode instanceof TimeoutNode) moveToNextLane(); // Skips to the next lane to start timer execution
 
         currentNode = nextNode;
+
+        // Perform action based on the type of the current node
+        action = NodeActionFactory.createNodeAction(currentNode, workflow, this);
+        nextNode = action.performActionAndGetNextNode();
+        nextLane = WorkflowUtils.getLaneOfNode(workflow, nextNode);
+
         return true;
     }
 
-    // sleep to simulate node execution time
-    private void simulateSomeWork() {
-        try {
-            Thread.sleep(WorkflowServer.nodeExecutionTimeSeconds * 1_000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
+    private boolean completeSession() {
+        state = SessionState.FINISHED;
+        System.out.println("\rSession " + name + " completed.");
+        return false;
+    }
+
+    private boolean shouldStopForNewLane() {
+        return !currentLane.equals(nextLane) && !(nextNode instanceof TimeoutNode);
+    }
+
+    private boolean stopSession() {
+        state = SessionState.STOPPED;
+        moveToNextLane();
+        System.out.println("\rSession " + name + ": stopped.");
+        return false;
+    }
+    
+    private void moveToNextLane() {
+    	currentLane = nextLane;
+    }
+
+    /* Stops the timer and continues to the next node. */
+    public void killTimerAndResume() {
+        if (action instanceof TimeoutAction timeoutAction) {
+            timeoutAction.killTimerAndResume();
         }
     }
 
-    private void printCurrentNodeDoneMessage() {
-    	System.out.print("Session " + name + ": ");
-        if (currentNode instanceof TaskNode) {
-            System.out.println(((TaskNode) currentNode).getName() + " done.");
-        } else if (currentNode instanceof NOP) {
-            System.out.println("NOP done.");
-        }
-    }
-
+    /* Returns a message based on the current state of the session. */
     public String getStateMessage() {
         return switch (state) {
-            case INITIALIZED -> "Initialized.";
-            case RUNNING -> getCurrentNodeStatusMessage();
-            case STOPPED -> currentLane.getName();
-            case FINISHED -> "Ended.";
+            case INITIALIZED -> "\rInitialized.";
+            case TIMER_ON -> "\rWaiting for resume or timeout on lane " + currentLane.getName() + ".";
+            case RUNNING -> "\r" + WorkflowUtils.getNodeStatusMessage(currentNode);
+            case STOPPED -> "\rWaiting to resume on lane " + currentLane.getName() + ".";
+            case FINISHED -> "\rEnded.";
             default -> "";
         };
-    }
-
-    // Returns a message based on the current node type
-    private String getCurrentNodeStatusMessage() {
-        return currentNode instanceof TaskNode
-                ? ((TaskNode) currentNode).getName() + " in progress."
-                : currentNode instanceof NOP
-                ? "NOP in progress."
-                : "";
     }
 }

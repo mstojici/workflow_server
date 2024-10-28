@@ -4,10 +4,10 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
-import com.neota.workflowserver.model.EndNode;
-import com.neota.workflowserver.model.Node;
-import com.neota.workflowserver.model.StartNode;
-import com.neota.workflowserver.model.Workflow;
+import com.neota.workflowserver.json.model.EndNode;
+import com.neota.workflowserver.json.model.Node;
+import com.neota.workflowserver.json.model.StartNode;
+import com.neota.workflowserver.json.model.Workflow;
 
 public class WorkflowValidator {
 
@@ -23,7 +23,7 @@ public class WorkflowValidator {
     private static <T> boolean validateSingleNodeOfType(Workflow workflow, Class<T> nodeType, String nodeTypeName) {
         boolean isValid = WorkflowUtils.countNodesOfType(workflow, nodeType) == 1;
         if (!isValid) {
-            System.out.println("There must be exactly one " + nodeTypeName + ".");
+            System.out.println("\rThere must be exactly one " + nodeTypeName + ".");
         }
         return isValid;
     }
@@ -31,7 +31,7 @@ public class WorkflowValidator {
     private static boolean validateNoBranching(Workflow workflow) {
         boolean hasBranching = findAnyNodeWithMultipleOutgoingLinks(workflow).isPresent();
         if (hasBranching) {
-            System.out.println("There must be no branching.");
+            System.out.println("\rThere must be no branching.");
         }
         return !hasBranching;
     }
@@ -39,7 +39,7 @@ public class WorkflowValidator {
     private static boolean validateAcyclicStructure(Workflow workflow) {
     	boolean isAcyclic = !detectCycles(workflow);
         if (!isAcyclic) {
-            System.out.println("Workflow must be acyclic.");
+            System.out.println("\rWorkflow must be acyclic.");
         }
         return isAcyclic;
     }

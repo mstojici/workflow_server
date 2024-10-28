@@ -1,4 +1,4 @@
-package com.neota.workflowserver.model;
+package com.neota.workflowserver.json.model;
 
 public class Workflow {
     private Source source;

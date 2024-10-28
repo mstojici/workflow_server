@@ -4,7 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.neota.workflowserver.model.Workflow;
+import com.neota.workflowserver.enums.CommandType;
+import com.neota.workflowserver.json.model.Workflow;
 
 public class WorkflowServer {
     private static final Map<String, Workflow> workflows = new HashMap<>();
@@ -14,46 +15,43 @@ public class WorkflowServer {
     public static void main(String[] args) {
         System.out.println("WorkflowServer is running.");
         try (Scanner scanner = new Scanner(System.in)) {
-            String command;
-            do {
-                command = scanner.nextLine();
-            } while (processCommand(command));
+            runCommandLoop(scanner);
         }
     }
 
+    /* The main loop */
+    private static void runCommandLoop(Scanner scanner) {
+        String command;
+        do {
+            System.out.print("> ");
+            command = scanner.nextLine();
+        } while (processCommand(command));
+    }
+
+    /* Parses and handles the command string from console */
     private static boolean processCommand(String command) {
         if (command.isBlank()) {
             return true;
         }
 
-        switch (WorkflowUtils.getCommandTypeFromCommandString(command)) {
-            case STOP:
-                System.out.println("WorkflowServer stopped.");
+        CommandType commandType = WorkflowUtils.getCommandTypeFromCommandString(command);
+        switch (commandType) {
+            case STOP -> {
+                System.out.println("\rWorkflowServer stopped.");
                 return false;
-            case CREATE_WORKFLOW:
-                handleCreateWorkflow(command);
-                break;
-            case START_SESSION:
-                handleStartSession(command);
-                break;
-            case RESUME_SESSION:
-                handleResumeSession(command);
-                break;
-            case SESSION_STATE:
-                handleSessionState(command);
-                break;
-            case SET_EXEC_TIME:
-            	handleSetExecTime(command);
-            	break;
-            case INVALID:
-                System.out.println("Invalid command.");
-                break;
+            }
+            case CREATE_WORKFLOW -> handleCreateWorkflow(command);
+            case START_SESSION -> handleStartSession(command);
+            case RESUME_SESSION -> handleResumeSession(command);
+            case SESSION_STATE -> handleSessionState(command);
+            case SET_EXEC_TIME -> handleSetExecTime(command);
+            case INVALID -> System.out.println("\rInvalid command.");
         }
         return true;
     }
 
     private static void handleCreateWorkflow(String command) {
-        String[] args = WorkflowUtils.parseCommandArgs(command, 3, 
+        String[] args = WorkflowUtils.parseCommandArgs(command, 3,
                 "create_workflow <workflow_name> <path_to_JSON_workflow>");
 
         String workflowName = args[1];
@@ -64,10 +62,10 @@ public class WorkflowServer {
                         workflow -> {
                             if (WorkflowValidator.validate(workflow)) {
                                 workflows.put(workflowName, workflow);
-                                System.out.println("Workflow " + workflowName  + " loaded.");
+                                System.out.println("\rWorkflow " + workflowName + " loaded.");
                             }
                         },
-                        () -> System.out.println("Invalid JSON workflow definition.")
+                        () -> System.out.println("\rInvalid JSON workflow definition.")
                 );
     }
 
@@ -78,15 +76,15 @@ public class WorkflowServer {
         String sessionName = args[1];
         String workflowName = args[2];
         Workflow workflow = workflows.get(workflowName);
-        
-        if(workflow == null)  {
-        	System.out.println("Workflow " + workflowName + " does not exist.");
-        	return;
+
+        if (workflow == null) {
+            System.out.println("\rWorkflow " + workflowName + " does not exist.");
+            return;
         }
-        
+
         Session session = new Session(workflow, sessionName);
         sessions.put(sessionName, session);
-        runSessionInNewThread(session);
+        startSessionThread(session);
         System.out.println("Session " + sessionName + " started.");
     }
 
@@ -94,54 +92,48 @@ public class WorkflowServer {
         String[] args = WorkflowUtils.parseCommandArgs(command, 2, "resume_session <session_name>");
         String sessionName = args[1];
         Session session = sessions.get(sessionName);
-        
-        if(session == null) {
-			System.out.println("Session " + sessionName + " does not exist.");
-			return;
+
+        if (session == null) {
+            System.out.println("\rSession " + sessionName + " does not exist.");
+            return;
         }
-        if (session.getState().equals(SessionState.FINISHED)) {
-        	System.out.println("Session " + sessionName + " is finished.");
-        	return;
+        switch (session.getState()) {
+            case FINISHED -> System.out.println("\rSession " + sessionName + " is finished.");
+            case RUNNING -> System.out.println("\rSession " + sessionName + " is already running.");
+            case TIMER_ON -> session.killTimerAndResume();
+            default -> {
+                startSessionThread(session);
+                System.out.println("\rResuming session " + sessionName + ".");
+            }
         }
-        if (session.getState().equals(SessionState.RUNNING)) {
-        	System.out.println("Session " + sessionName + " is already running.");
-        	return;
-        }
-        
-        runSessionInNewThread(session);
-    	System.out.println("Resuming session " + sessionName + ".");
     }
 
     private static void handleSessionState(String command) {
         String[] args = WorkflowUtils.parseCommandArgs(command, 2, "session_state <session_name>");
         String sessionName = args[1];
         Session session = sessions.get(sessionName);
-        
-        if(session == null) {
-			System.out.println("Session " + sessionName + " does not exist.");
-			return;
+
+        if (session == null) {
+            System.out.println("\rSession " + sessionName + " does not exist.");
+            return;
         }
-        
+
         System.out.println(session.getStateMessage());
     }
 
     private static void handleSetExecTime(String command) {
         String[] args = WorkflowUtils.parseCommandArgs(command, 2, "set_exec_time <time_in_seconds>");
         String timeString = args[1];
-        
+
         try {
             nodeExecutionTimeSeconds = Integer.parseInt(timeString);
+            System.out.println("\rExecution time set to " + nodeExecutionTimeSeconds + " seconds.");
         } catch (NumberFormatException e) {
-            System.out.println("Not an integer value: " + timeString);
-            return;
-        }        
-        System.out.println("Execution time set.");
+            System.out.println("\rInvalid integer value: " + timeString);
+        }
     }
 
-
-    // Start or continue a session in a new thread
-    private static void runSessionInNewThread(Session session) {
+    private static void startSessionThread(Session session) {
         new Thread(session::go).start();
     }
 }
-

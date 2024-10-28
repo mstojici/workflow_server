@@ -1,6 +1,6 @@
-package com.neota.workflowserver.model;
+package com.neota.workflowserver.json.model;
 
-public class NOP implements Node {
+public class StartNode implements Node {
 	private String id;
 
 	@Override
@@ -15,6 +15,6 @@ public class NOP implements Node {
 
 	@Override
 	public String toString() {
-		return "NOP{id='" + id + "'}\n";
+		return "StartNode{id='" + id + "'}\n";
 	}
 }

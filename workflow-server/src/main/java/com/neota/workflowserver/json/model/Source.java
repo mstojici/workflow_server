@@ -1,4 +1,4 @@
-package com.neota.workflowserver.model;
+package com.neota.workflowserver.json.model;
 
 import java.util.Map;
 
@@ -6,6 +6,7 @@ public class Source {
 	private Map<String, Node> nodes;
 	private Map<String, Lane> lanes;
 	private Map<String, Link> links;
+	private Map<String, Link> timeoutlinks;
 
 	public Map<String, Node> getNodes() {
 		return nodes;
@@ -31,12 +32,21 @@ public class Source {
 		this.links = links;
 	}
 
+	public Map<String, Link> getTimeoutlinks() {
+		return timeoutlinks;
+	}
+
+	public void setTimeoutlinks(Map<String, Link> timeoutlinks) {
+		this.timeoutlinks = timeoutlinks;
+	}
+
 	@Override
 	public String toString() {
 		return "Source{\n" + 
 				"nodes=\n" + 
 				nodes + ", " + "lanes=\n" + 
 				lanes + ", " + "links=\n" + 
-				links + "}\n";
+				links + ", " + "timeoutlinks=\n" + 
+				timeoutlinks + "}\n";
 	}
 }
