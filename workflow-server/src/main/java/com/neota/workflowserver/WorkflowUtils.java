@@ -120,7 +120,7 @@ public class WorkflowUtils {
     public static String getNodeStatusMessage(Node node) {
     	if (node instanceof TaskNode) return ((TaskNode)node).getName() + " in progress.";
     	if (node instanceof NOP) return ("NOP in progress.");
-    	if (node instanceof EmailNode) return ("Sendineg e-mail to : " + ((EmailNode)node).getEmail());
+    	if (node instanceof EmailNode) return ("Sending e-mail to : " + ((EmailNode)node).getEmail());
         return "";
     }
 }

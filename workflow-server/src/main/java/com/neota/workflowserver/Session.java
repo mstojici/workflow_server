@@ -77,12 +77,12 @@ public class Session {
     private boolean stopSession() {
         state = SessionState.STOPPED;
         moveToNextLane();
-        System.out.println("\rSession " + name + ": stopped.");
         return false;
     }
     
     private void moveToNextLane() {
     	currentLane = nextLane;
+        System.out.println("\rSession " + name + ": Waiting on lane " + currentLane.getName());
     }
 
     /* Stops the timer and continues to the next node. */
